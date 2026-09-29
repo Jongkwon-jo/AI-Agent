@@ -63,6 +63,41 @@ python step3_agent.py
 
 화면에 `[도구 실행]`, `[도구 결과]` 가 찍히는 것을 보면 에이전트가 어떻게 생각하고 움직이는지 알 수 있습니다.
 
+## 우리 서버의 vLLM 모델로 실행하기 (`local_llm/` 폴더)
+
+Claude API 대신 연구원 서버에 올라간 **vLLM** 모델로도 똑같은 실습을 할 수 있습니다.
+vLLM 은 OpenAI 와 같은 형식의 API 를 제공하므로 `openai` 라이브러리를 사용합니다.
+
+### 1. SSH 터널 열기 (터미널을 하나 따로 열어서 실행)
+```bash
+ssh -N -p 10521 -L 8100:127.0.0.1:8000 work@max.gntp.or.kr
+```
+- 비밀번호를 입력하고 나면 **아무것도 출력되지 않은 채 멈춰 있는 것이 정상**입니다. 이 창은 닫지 말고 그대로 두세요.
+- 의미: 내 컴퓨터의 `8100` 포트 → 서버 안의 `127.0.0.1:8000` (vLLM) 으로 연결됩니다.
+- Windows 에서는 PowerShell 에서 같은 명령어를 쓰면 됩니다.
+
+### 2. 다른 터미널에서 실행
+```bash
+python local_llm/step0_check.py   # 연결 확인 + 서버에 있는 모델 이름 출력
+python local_llm/step1_hello.py   # 질문 한 번
+python local_llm/step2_chat.py    # 대화 기억
+python local_llm/step3_agent.py   # 도구를 쓰는 에이전트
+```
+설정은 `.env` 의 `VLLM_BASE_URL`, `VLLM_API_KEY`, `VLLM_MODEL` 로 바꿀 수 있습니다. (`.env.example` 참고)
+
+### 3. 도구 호출 켜기 (3단계용)
+3단계 에이전트는 모델이 도구를 호출할 수 있어야 합니다. vLLM 을 실행할 때 아래 옵션이 필요합니다.
+```bash
+vllm serve <모델이름> --enable-auto-tool-choice --tool-call-parser <파서>
+```
+| 모델 계열 | `--tool-call-parser` |
+|---|---|
+| Qwen2.5 / Qwen3 | `hermes` |
+| Llama 3.1 / 3.2 / 3.3 | `llama3_json` |
+| Mistral | `mistral` |
+
+옵션 없이 실행된 서버라면 `step3_agent.py` 실행 시 "서버가 요청을 거절했습니다" 메시지가 나옵니다. 서버 관리자에게 옵션 추가를 요청하세요.
+
 ## 파일 구조
 
 ```
@@ -72,6 +107,7 @@ AI-Agent/
 ├── step1_hello.py    # 1단계: 질문 한 번
 ├── step2_chat.py     # 2단계: 대화 기억
 ├── step3_agent.py    # 3단계: 도구를 쓰는 에이전트
+├── local_llm/        # vLLM(우리 서버) 버전: step0~3
 ├── requirements.txt  # 필요한 라이브러리 목록
 └── .env.example      # API 키 설정 예시
 ```
